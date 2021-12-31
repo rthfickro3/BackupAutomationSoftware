@@ -20,23 +20,23 @@ def backup(backupDir):
         print('Backup Directory Created!')
     
     todayDate = datetime.today().strftime('%Y-%m-%d')
-    backupFileName = todayDate + ' QA Work List Backup.xlsx'
+    backupFileName = todayDate + ' Temp Backup.txt'
     
-    if(os.path.isfile('QA이슈 처리 리스트.xlsx')): 
-        copyfile('F:\\QA이슈 처리 리스트.xlsx', 'F:\\backup\\' + backupFileName)
+    if(os.path.isfile('temp.txt')): 
+        copyfile('C:\\Development\\BASTest\\temp.txt', 'C:\\Development\\BASTest\\backup\\' + backupFileName)
         print('File Copy and Paste Success!')
 
-    if(os.path.isdir('\\backup') and os.path.isfile('\\backup\\' + backupFileName)):
+    if(os.path.isdir('backup') and os.path.isfile('backup\\'+ backupFileName)):
         try:
             s = smtplib.SMTP('smtp.gmail.com', 587)
             s.starttls()
             s.login('rthfickro3@gmail.com', 'unjufjbcprzluchm')
 
             msg = MIMEMultipart()
-            msg['Subject'] = todayDate + 'QA Work List Backup'
-            msg.attach(MIMEText(todayDate + ' BackupFile', 'plain'))
+            msg['Subject'] = todayDate + 'Test Backup'
+            msg.attach(MIMEText(todayDate + ' Backup success', 'plain'))
 
-            attachment = open('F:\\backup\\'+backupFileName, 'rb')
+            attachment = open('C:\\Development\\BASTest\\backup\\' + backupFileName, 'rb')
             part = MIMEBase('application', 'octet-stream')
             part.set_payload((attachment).read())
             encoders.encode_base64(part)
@@ -51,7 +51,7 @@ def backup(backupDir):
             print('---------------BackupScript Closed,,,---------------')
             s.quit()
 
-schedule.every(30).seconds.do(backup, 'F:')
+schedule.every(5).seconds.do(backup, 'C:\\Development\\BASTest')
 
 while True:
     schedule.run_pending()

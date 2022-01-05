@@ -1,49 +1,64 @@
 import os
-from shutil import copyfile
-from datetime import datetime
+import schedule
+import time
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from shutil import copyfile
+from datetime import datetime
 
-import schedule
-import time
+def init(backupInfo):
+    backupDir = backupInfo["backupDir"]
+    backupFileWithDir = backupInfo["backupFileWithDir"]
+    email = backupInfo["email"]
+    emailAppPw = backupInfo["emailAppPw"]
 
-def backup(backupDir):
-    print('---------------BackupScript Started,,,---------------')
 
+
+def makeBackupDir():
+    print(backupDir)
     os.chdir(backupDir)
 
-    if(not os.path.isdir('\\backup')):
-        os.mkdir('\\backup')
+    if(not os.path.isdir('backup')):
+        os.mkdir('backup')
         print('Backup Directory Created!')
-    
+
+
+
+def copyInBackupDir():
     todayDate = datetime.today().strftime('%Y-%m-%d')
     backupFileName = todayDate + ' Temp Backup.txt'
-    
+
     if(os.path.isfile('temp.txt')): 
-        copyfile('C:\\Development\\BASTest\\temp.txt', 'C:\\Development\\BASTest\\backup\\' + backupFileName)
+        copyfile(backupFileWithDir, backupDir + '\\backup\\' + backupFileName)
         print('File Copy and Paste Success!')
+
+
+
+def sendMailBackupFile():
+    todayDate = datetime.today().strftime('%Y-%m-%d')
+    backupFileName = todayDate + ' Temp Backup.txt'
 
     if(os.path.isdir('backup') and os.path.isfile('backup\\'+ backupFileName)):
         try:
             s = smtplib.SMTP('smtp.gmail.com', 587)
             s.starttls()
-            s.login('rthfickro3@gmail.com', 'unjufjbcprzluchm')
+            s.login(email, emailAppPw)
 
             msg = MIMEMultipart()
             msg['Subject'] = todayDate + 'Test Backup'
             msg.attach(MIMEText(todayDate + ' Backup success', 'plain'))
 
-            attachment = open('C:\\Development\\BASTest\\backup\\' + backupFileName, 'rb')
+            attachment = open(backupDir + '\\backup\\' + backupFileName, 'rb')
             part = MIMEBase('application', 'octet-stream')
             part.set_payload((attachment).read())
             encoders.encode_base64(part)
             part.add_header('Content-Disposition', 'attachment; filename = ' + backupFileName)
             msg.attach(part)
 
-            s.sendmail('rthfickro3@gmail.com', 'rthfickro3@gmail.com', msg.as_string())
+            s.sendmail(email, email, msg.as_string())
         except Exception as e:
             print(e)
         finally:
@@ -51,8 +66,32 @@ def backup(backupDir):
             print('---------------BackupScript Closed,,,---------------')
             s.quit()
 
-schedule.every(5).seconds.do(backup, 'C:\\Development\\BASTest')
+
+
+def backup(backupInfo):
+    init(backupInfo)
+
+    makeBackupDir()
+
+    copyInBackupDir()
+
+    sendMailBackupFile()
+
+
+print('---------------BackupScript Started,,,---------------')
+backupDir = input('choose your backup directory : ')
+backupFileWithDir = input('choose your backup file with directory : ')
+email = input('input your email address : ')
+emailAppPw = input('input your application password : ')
+
+if(backupDir != '' and backupDir != '' and email != '' and emailAppPw != ''):
+    backupInfo = {"backupDir" : backupDir, "backupFileWithDir": backupFileWithDir, "email" : email, "emailAppPw" : emailAppPw}
+
+schedule.every(5).seconds.do(backup, backupInfo)
 
 while True:
-    schedule.run_pending()
-    time.sleep(1)
+
+        schedule.run_pending()
+        time.sleep(1)
+        
+    

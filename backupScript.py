@@ -9,13 +9,23 @@ from email import encoders
 from shutil import copyfile
 from datetime import datetime
 
-def init(backupInfo):
-    backupDir = backupInfo["backupDir"]
-    backupFileWithDir = backupInfo["backupFileWithDir"]
-    email = backupInfo["email"]
-    emailAppPw = backupInfo["emailAppPw"]
+
+print('---------------BackupScript Started,,,---------------')
+backupDir = input('choose your backup directory : ')
+backupFileWithDir = input('choose your backup file with directory : ')
+email = input('input your email address : ')
+emailAppPw = input('input your application password : ')
 
 
+def backup():
+
+    makeBackupDir()
+
+    copyInBackupDir()
+
+    sendMailBackupFile()
+
+    
 
 def makeBackupDir():
     print(backupDir)
@@ -66,32 +76,13 @@ def sendMailBackupFile():
             print('---------------BackupScript Closed,,,---------------')
             s.quit()
 
-
-
-def backup(backupInfo):
-    init(backupInfo)
-
-    makeBackupDir()
-
-    copyInBackupDir()
-
-    sendMailBackupFile()
-
-
-print('---------------BackupScript Started,,,---------------')
-backupDir = input('choose your backup directory : ')
-backupFileWithDir = input('choose your backup file with directory : ')
-email = input('input your email address : ')
-emailAppPw = input('input your application password : ')
-
 if(backupDir != '' and backupDir != '' and email != '' and emailAppPw != ''):
-    backupInfo = {"backupDir" : backupDir, "backupFileWithDir": backupFileWithDir, "email" : email, "emailAppPw" : emailAppPw}
+    schedule.every(5).seconds.do(backup)
 
-schedule.every(5).seconds.do(backup, backupInfo)
-
-while True:
-
+    while True:
         schedule.run_pending()
         time.sleep(1)
+else:
+    exit()
         
     

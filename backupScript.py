@@ -2,6 +2,7 @@ import os
 import schedule
 import time
 import smtplib
+from tkinter import filedialog
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -10,12 +11,21 @@ from shutil import copyfile
 from datetime import datetime
 
 
+
 print('---------------BackupScript Started,,,---------------')
-backupDir = input('choose your backup directory : ')
-backupFileWithDir = input('choose your backup file with directory : ')
+
+print("choose your backup directory")
+backupDir = filedialog.askdirectory(initialdir = "C:/",title = "choose your backup directory")
+print(backupDir)
+print("choose your backup file with directory")
+backupFileWithDir = filedialog.askopenfilename(initialdir = "C:/", title = "choose your backup file with directory")
+print(backupFileWithDir)
 email = input('input your email address : ')
 emailAppPw = input('input your application password : ')
 
+fileName = ""
+fileExt = ""
+backupFilePath = ""
 
 def backup():
 
@@ -25,7 +35,21 @@ def backup():
 
     sendMailBackupFile()
 
-    
+
+
+def getFileNameAndExt(fileWithPath):
+    global fileName
+    global fileExt
+    global backupFilePath
+
+    fileNameIdx = backupFileWithDir.rindex('/') + 1
+    fileName = fileWithPath[fileNameIdx:]
+    fileExtIdx = fileName.rfind('.')
+    fileExt = fileName[fileExtIdx:]
+    backupFilePath = backupFileWithDir[:fileNameIdx]
+    print(backupFilePath)
+
+
 
 def makeBackupDir():
     print(backupDir)
@@ -38,10 +62,13 @@ def makeBackupDir():
 
 
 def copyInBackupDir():
-    todayDate = datetime.today().strftime('%Y-%m-%d')
-    backupFileName = todayDate + ' Temp Backup.txt'
+    getFileNameAndExt(backupFileWithDir)
 
-    if(os.path.isfile('temp.txt')): 
+    todayDate = datetime.today().strftime('%Y-%m-%d')
+    backupFileName = todayDate + ' Backup' + fileExt
+
+    os.chdir(backupFilePath)
+    if(os.path.isfile(fileName)): 
         copyfile(backupFileWithDir, backupDir + '\\backup\\' + backupFileName)
         print('File Copy and Paste Success!')
 
@@ -49,7 +76,7 @@ def copyInBackupDir():
 
 def sendMailBackupFile():
     todayDate = datetime.today().strftime('%Y-%m-%d')
-    backupFileName = todayDate + ' Temp Backup.txt'
+    backupFileName = todayDate + ' Backup' + fileExt
 
     if(os.path.isdir('backup') and os.path.isfile('backup\\'+ backupFileName)):
         try:
@@ -75,6 +102,8 @@ def sendMailBackupFile():
             print('Mail Send Success!')
             print('---------------BackupScript Closed,,,---------------')
             s.quit()
+
+
 
 if(backupDir != '' and backupDir != '' and email != '' and emailAppPw != ''):
     schedule.every(5).seconds.do(backup)

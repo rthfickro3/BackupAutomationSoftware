@@ -16,16 +16,15 @@ print('---------------BackupScript Started,,,---------------')
 
 print("choose your backup directory")
 backupDir = filedialog.askdirectory(initialdir = "C:/",title = "choose your backup directory")
-print(backupDir)
 print("choose your backup file with directory")
-backupFileWithDir = filedialog.askopenfilename(initialdir = "C:/", title = "choose your backup file with directory")
-print(backupFileWithDir)
+backupFileWithDir = filedialog.askopenfilename(initialdir = "C:/", title = "choose your backup file with directory")    
 email = input('input your email address : ')
 emailAppPw = input('input your application password : ')
 
 fileName = ""
-fileExt = ""
-backupFilePath = ""
+filePath = ""
+
+
 
 def backup():
 
@@ -37,22 +36,16 @@ def backup():
 
 
 
-def getFileNameAndExt(fileWithPath):
+def getFileInfo():
     global fileName
-    global fileExt
-    global backupFilePath
+    global filePath
 
-    fileNameIdx = backupFileWithDir.rindex('/') + 1
-    fileName = fileWithPath[fileNameIdx:]
-    fileExtIdx = fileName.rfind('.')
-    fileExt = fileName[fileExtIdx:]
-    backupFilePath = backupFileWithDir[:fileNameIdx]
-    print(backupFilePath)
+    fileName = backupFileWithDir[backupFileWithDir.rindex('/') + 1:]
+    filePath = backupFileWithDir[:backupFileWithDir.rfind('/')]
 
 
 
 def makeBackupDir():
-    print(backupDir)
     os.chdir(backupDir)
 
     if(not os.path.isdir('backup')):
@@ -62,12 +55,12 @@ def makeBackupDir():
 
 
 def copyInBackupDir():
-    getFileNameAndExt(backupFileWithDir)
+    getFileInfo()
 
     todayDate = datetime.today().strftime('%Y-%m-%d')
-    backupFileName = todayDate + ' Backup' + fileExt
+    backupFileName = todayDate + ' B_' + fileName
 
-    os.chdir(backupFilePath)
+    os.chdir(filePath)
     if(os.path.isfile(fileName)): 
         copyfile(backupFileWithDir, backupDir + '\\backup\\' + backupFileName)
         print('File Copy and Paste Success!')
@@ -76,8 +69,9 @@ def copyInBackupDir():
 
 def sendMailBackupFile():
     todayDate = datetime.today().strftime('%Y-%m-%d')
-    backupFileName = todayDate + ' Backup' + fileExt
+    backupFileName = todayDate + ' B_' + fileName
 
+    os.chdir(backupDir)
     if(os.path.isdir('backup') and os.path.isfile('backup\\'+ backupFileName)):
         try:
             s = smtplib.SMTP('smtp.gmail.com', 587)

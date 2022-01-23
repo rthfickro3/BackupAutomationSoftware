@@ -24,6 +24,102 @@ emailAppPw = ''
 fileName = ''
 filePath = ''
 
+class WorkThread(QThread):
+    def __init__(self, parent):
+        super().__init__()
+
+        self.parent = parent
+
+        global email
+        global emailAppPw
+        email = self.parent.emailInput.text()
+        emailAppPw = self.parent.emailAppPwInput.text()
+
+ 
+    def run(self):
+        while True:
+            self.parent.logTextBox.append('----------------------BackupScript Started,,,----------------------')
+
+            schedule.every(5).seconds.do(self.backup)
+
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+
+
+    def backup(self):
+        self.makeBackupDir()
+        self.copyInBackupDir()
+        #self.sendMailBackupFile()
+
+
+
+    def makeBackupDir(self):
+        os.chdir(backupDir)
+
+        if(not os.path.isdir('backup')):
+            os.mkdir('backup')
+            self.parent.logTextBox.append('Backup Directory Created Success!')
+            QApplication.processEvents()
+
+
+                   
+    def getFileInfo(self):
+        global fileName
+        global filePath
+
+        fileName = backupFileWithDir[backupFileWithDir.rindex('/') + 1:]
+        filePath = backupFileWithDir[:backupFileWithDir.rfind('/')]
+
+
+         
+    def copyInBackupDir(self):
+        self.getFileInfo()
+
+        todayDate = datetime.today().strftime('%Y-%m-%d')
+        backupFileName = todayDate + ' B_' + fileName
+
+        os.chdir(filePath)
+        if(os.path.isfile(fileName)): 
+            copyfile(backupFileWithDir, backupDir + '\\backup\\' + backupFileName)
+            self.parent.logTextBox.append('File Copy and Paste Success!')
+            QApplication.processEvents()
+
+
+
+    def sendMailBackupFile(self):
+        todayDate = datetime.today().strftime('%Y-%m-%d')
+        backupFileName = todayDate + ' B_' + fileName
+
+        os.chdir(backupDir)
+        if(os.path.isdir('backup') and os.path.isfile('backup\\'+ backupFileName)):
+            try:
+                s = smtplib.SMTP('smtp.gmail.com', 587)
+                s.starttls()
+                s.login(email, emailAppPw)
+
+                msg = MIMEMultipart()
+                msg['Subject'] = todayDate + 'Test Backup'
+                msg.attach(MIMEText(todayDate + ' Backup success', 'plain'))
+
+                attachment = open(backupDir + '\\backup\\' + backupFileName, 'rb')
+                part = MIMEBase('application', 'octet-stream')
+                part.set_payload((attachment).read())
+                encoders.encode_base64(part)
+                part.add_header('Content-Disposition', 'attachment; filename = ' + backupFileName)
+                msg.attach(part)
+
+                s.sendmail(email, email, msg.as_string())
+            except Exception as e:
+                self.parent.logTextBox.append(e)
+                QApplication.processEvents()
+            finally:
+                self.parent.logTextBox.append('Mail Send Success!')
+                QApplication.processEvents()
+                self.parent.logTextBox.append('----------------------BackupScript Closed,,,----------------------')
+                QApplication.processEvents()
+                s.quit()
+
 class MyApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -66,15 +162,15 @@ class MyApp(QWidget):
         grid.addWidget(self.logTextBox, 4, 0, 4, 2)
         grid.addWidget(self.execBackupBtn, 5, 2)
 
+        self.workThread = WorkThread(self)
+
         self.findBackupDirBtn.clicked.connect(self.findBackupDir)
         self.findBackupFileBtn.clicked.connect(self.findBackupFile)
-        self.execBackupBtn.clicked.connect(self.execBackup)
+        self.execBackupBtn.clicked.connect(self.workThread.start)
 
         self.setWindowTitle('QGridLayout')
         self.resize(800, 400)
         self.show()
-
-
 
     def findBackupDir(self):
         global backupDir 
@@ -93,85 +189,7 @@ class MyApp(QWidget):
             self.backupFileInput.setText(backupFileWithDir)
 
 
-    def execBackup(self):
-        global email
-        global emailAppPw
-        email = self.emailInput.text()
-        emailAppPw = self.emailAppPwInput.text()
-
-
-        self.logTextBox.append('----------------------BackupScript Started,,,----------------------')
-        self.backup()
-    
-
-    def backup(self):
-        self.makeBackupDir()
-        self.copyInBackupDir()
-        self.sendMailBackupFile()
-        print("ddd")
-
-
-
-    def makeBackupDir(self):
-        os.chdir(backupDir)
-
-        if(not os.path.isdir('backup')):
-            os.mkdir('backup')
-            self.logTextBox.append('Backup Directory Created Success!')
-
-
-                   
-    def getFileInfo(self):
-        global fileName
-        global filePath
-
-        fileName = backupFileWithDir[backupFileWithDir.rindex('/') + 1:]
-        filePath = backupFileWithDir[:backupFileWithDir.rfind('/')]
-
-
-         
-    def copyInBackupDir(self):
-        self.getFileInfo()
-
-        todayDate = datetime.today().strftime('%Y-%m-%d')
-        backupFileName = todayDate + ' B_' + fileName
-
-        os.chdir(filePath)
-        if(os.path.isfile(fileName)): 
-            copyfile(backupFileWithDir, backupDir + '\\backup\\' + backupFileName)
-            self.logTextBox.append('File Copy and Paste Success!')
-
-
-
-    def sendMailBackupFile(self):
-        todayDate = datetime.today().strftime('%Y-%m-%d')
-        backupFileName = todayDate + ' B_' + fileName
-
-        os.chdir(backupDir)
-        if(os.path.isdir('backup') and os.path.isfile('backup\\'+ backupFileName)):
-            try:
-                s = smtplib.SMTP('smtp.gmail.com', 587)
-                s.starttls()
-                s.login(email, emailAppPw)
-
-                msg = MIMEMultipart()
-                msg['Subject'] = todayDate + 'Test Backup'
-                msg.attach(MIMEText(todayDate + ' Backup success', 'plain'))
-
-                attachment = open(backupDir + '\\backup\\' + backupFileName, 'rb')
-                part = MIMEBase('application', 'octet-stream')
-                part.set_payload((attachment).read())
-                encoders.encode_base64(part)
-                part.add_header('Content-Disposition', 'attachment; filename = ' + backupFileName)
-                msg.attach(part)
-
-                s.sendmail(email, email, msg.as_string())
-            except Exception as e:
-                self.logTextBox.append(e)
-            finally:
-                self.logTextBox.append('Mail Send Success!')
-                self.logTextBox.append('----------------------BackupScript Closed,,,----------------------')
-                s.quit()
+ 
 
 if __name__ == '__main__':
    app = QApplication(sys.argv)

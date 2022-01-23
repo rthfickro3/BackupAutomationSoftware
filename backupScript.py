@@ -13,7 +13,6 @@ from shutil import copyfile
 from datetime import datetime
 import sys
 from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QTextEdit, QPushButton)
-from PyQt5 import QtCore
 from PyQt5.QtCore import *
 
 backupDir = ''
@@ -120,46 +119,45 @@ class WorkThread(QThread):
                 QApplication.processEvents()
                 s.quit()
 
-class MyApp(QWidget):
+class Main(QWidget):
     def __init__(self):
         super().__init__()
-        self.initUI()
+        self.configUi()
 
-        
-
-    def initUI(self):
+    def configUi(self):
         grid = QGridLayout()
         self.setLayout(grid)
 
-        label1 = QLabel('Choose Backup Directory:', self)
         self.backupDirInput = QLineEdit(self)
         self.findBackupDirBtn = QPushButton('Find', self)
 
-        label2 = QLabel('Choose Backup File:', self)
         self.backupFileInput = QLineEdit(self)
         self.findBackupFileBtn = QPushButton('Find', self)
 
-        label3 = QLabel('Input Your Email:', self)
         self.emailInput = QLineEdit(email, self)
 
-        label4 = QLabel('Input Your Email App Password:', self)
         self.emailAppPwInput = QLineEdit(emailAppPw, self)
 
         self.execBackupBtn = QPushButton('Run', self)
 
         self.logTextBox = QTextEdit()
 
-        grid.addWidget(label1, 0, 0)
+        grid.addWidget(QLabel('Choose Backup Directory:', self), 0, 0)
         grid.addWidget(self.backupDirInput, 0, 1)
         grid.addWidget(self.findBackupDirBtn, 0, 2)
-        grid.addWidget(label2, 1, 0)
+
+        grid.addWidget(QLabel('Choose Backup File:', self), 1, 0)
         grid.addWidget(self.backupFileInput, 1, 1)
         grid.addWidget(self.findBackupFileBtn, 1, 2)
-        grid.addWidget(label3, 2, 0)
+
+        grid.addWidget(QLabel('Input Your Email:', self), 2, 0)
         grid.addWidget(self.emailInput, 2, 1)
-        grid.addWidget(label4, 3, 0)
+
+        grid.addWidget(QLabel('Input Your Email App Password:', self), 3, 0)
         grid.addWidget(self.emailAppPwInput, 3, 1)
+
         grid.addWidget(self.logTextBox, 4, 0, 4, 2)
+        
         grid.addWidget(self.execBackupBtn, 5, 2)
 
         self.workThread = WorkThread(self)
@@ -168,7 +166,7 @@ class MyApp(QWidget):
         self.findBackupFileBtn.clicked.connect(self.findBackupFile)
         self.execBackupBtn.clicked.connect(self.workThread.start)
 
-        self.setWindowTitle('QGridLayout')
+        self.setWindowTitle('BackupAutomationSoftware')
         self.resize(800, 400)
         self.show()
 
@@ -190,8 +188,7 @@ class MyApp(QWidget):
 
 
  
-
 if __name__ == '__main__':
    app = QApplication(sys.argv)
-   ex = MyApp()
+   ex = Main()
    sys.exit(app.exec_())

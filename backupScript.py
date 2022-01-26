@@ -4,6 +4,8 @@ from turtle import back
 import schedule
 import time
 import smtplib
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.base import JobLookupError
 from tkinter import filedialog
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -12,8 +14,8 @@ from email import encoders
 from shutil import copyfile
 from datetime import datetime
 import sys
-from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QTextEdit, QPushButton)
-from PyQt5.QtCore import *
+from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QTextEdit, QPushButton, QSpinBox, QCheckBox)
+from PyQt5.QtCore import QThread
 
 backupDir = ''
 backupFileWithDir = ''
@@ -23,27 +25,27 @@ emailAppPw = ''
 fileName = ''
 filePath = ''
 
+hourVal = ''
+minuteVal = ''
+secondVal = ''
+
 class WorkThread(QThread):
     def __init__(self, parent):
         super().__init__()
 
         self.parent = parent
-
-        global email
-        global emailAppPw
-        email = self.parent.emailInput.text()
-        emailAppPw = self.parent.emailAppPwInput.text()
-
  
     def run(self):
+
+        self.parent.logTextBox.append('----------------------BackupScript Started,,,----------------------')
+
+        sched = BackgroundScheduler()
+        sched.start()
+
+        sched.add_job(self.backup, 'cron', hour = hourVal, minute = minuteVal, second = secondVal, id="test1")
+
         while True:
-            self.parent.logTextBox.append('----------------------BackupScript Started,,,----------------------')
-
-            schedule.every(5).seconds.do(self.backup)
-
-            while True:
-                schedule.run_pending()
-                time.sleep(1)
+            time.sleep(1)
 
 
     def backup(self):
@@ -62,18 +64,7 @@ class WorkThread(QThread):
             QApplication.processEvents()
 
 
-                   
-    def getFileInfo(self):
-        global fileName
-        global filePath
-
-        fileName = backupFileWithDir[backupFileWithDir.rindex('/') + 1:]
-        filePath = backupFileWithDir[:backupFileWithDir.rfind('/')]
-
-
-         
     def copyInBackupDir(self):
-        self.getFileInfo()
 
         todayDate = datetime.today().strftime('%Y-%m-%d')
         backupFileName = todayDate + ' B_' + fileName
@@ -119,6 +110,8 @@ class WorkThread(QThread):
                 QApplication.processEvents()
                 s.quit()
 
+
+
 class Main(QWidget):
     def __init__(self):
         super().__init__()
@@ -140,6 +133,26 @@ class Main(QWidget):
 
         self.execBackupBtn = QPushButton('Run', self)
 
+        self.hourSelect = QSpinBox()
+        self.hourSelect.setMinimum(0)
+        self.hourSelect.setMaximum(23)
+        self.hourSelect.setMaximumWidth(50)
+
+        self.minuteSelect = QSpinBox()
+        self.minuteSelect.setMinimum(0)
+        self.minuteSelect.setMaximum(59)
+        self.minuteSelect.setMaximumWidth(50)
+        
+        self.secondSelect = QSpinBox()
+        self.secondSelect.setMinimum(0)
+        self.secondSelect.setMaximum(59)
+        self.secondSelect.setMaximumWidth(50)
+
+        self.hourEvery = QCheckBox('every', self)
+        self.minuteEvery = QCheckBox('every', self)
+        self.secondEvery = QCheckBox('every', self)
+        
+    
         self.logTextBox = QTextEdit()
 
         grid.addWidget(QLabel('Choose Backup Directory:', self), 0, 0)
@@ -156,18 +169,28 @@ class Main(QWidget):
         grid.addWidget(QLabel('Input Your Email App Password:', self), 3, 0)
         grid.addWidget(self.emailAppPwInput, 3, 1)
 
-        grid.addWidget(self.logTextBox, 4, 0, 4, 2)
-        
-        grid.addWidget(self.execBackupBtn, 5, 2)
+        grid.addWidget(self.logTextBox, 5, 0, 5, 2)
+
+        grid.addWidget(QLabel('HOUR (0~23)', self), 5, 2)
+        grid.addWidget(self.hourSelect, 5, 3)
+        grid.addWidget(self.hourEvery, 5, 4)
+        grid.addWidget(QLabel('MINUTE (20~59)', self), 6, 2)
+        grid.addWidget(self.minuteSelect, 6, 3)
+        grid.addWidget(self.minuteEvery, 6, 4)
+        grid.addWidget(QLabel('SECOND (0~59)', self), 7, 2)
+        grid.addWidget(self.secondSelect, 7, 3)
+        grid.addWidget(self.secondEvery, 7, 4)
+
+        grid.addWidget(self.execBackupBtn, 8, 2, 6, 2)
 
         self.workThread = WorkThread(self)
 
         self.findBackupDirBtn.clicked.connect(self.findBackupDir)
         self.findBackupFileBtn.clicked.connect(self.findBackupFile)
-        self.execBackupBtn.clicked.connect(self.workThread.start)
+        self.execBackupBtn.clicked.connect(self.initVal)
 
         self.setWindowTitle('BackupAutomationSoftware')
-        self.resize(800, 400)
+        self.resize(1200, 400)
         self.show()
 
     def findBackupDir(self):
@@ -185,6 +208,44 @@ class Main(QWidget):
         backupFileWithDir = filedialog.askopenfilename(initialdir = "C:/", title = "choose your backup file with directory")
         if(backupFileWithDir != ''):
             self.backupFileInput.setText(backupFileWithDir)
+
+
+
+    def initVal(self):
+        global email
+        global emailAppPw
+
+        global hourVal
+        global minuteVal
+        global secondVal        
+
+        global fileName
+        global filePath
+
+
+
+        email = self.emailInput.text()
+        emailAppPw = self.emailAppPwInput.text()
+
+        hourVal = str(self.hourSelect.value())
+        minuteVal = str(self.minuteSelect.value())
+        secondVal = str(self.secondSelect.value())
+
+        fileName = backupFileWithDir[backupFileWithDir.rindex('/') + 1:]
+        filePath = backupFileWithDir[:backupFileWithDir.rfind('/')]
+
+        if(self.hourEvery.isChecked()):
+            hourVal = '*/' + hourVal
+        if(self.minuteEvery.isChecked()):
+            minuteVal = '*/' + minuteVal
+        if(self.secondEvery.isChecked()):
+            secondVal = '*/' + secondVal
+
+        print(hourVal)
+        print(minuteVal)
+        print(secondVal)
+
+        self.workThread.start()
 
 
  

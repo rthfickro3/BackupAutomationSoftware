@@ -14,7 +14,7 @@ from email import encoders
 from shutil import copyfile
 from datetime import datetime
 import sys
-from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QTextEdit, QPushButton, QSpinBox, QCheckBox)
+from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout, QLabel, QLineEdit, QTextEdit, QPushButton, QSpinBox, QCheckBox, QMessageBox, QComboBox)
 from PyQt5.QtCore import QThread
 
 backupDir = ''
@@ -29,11 +29,16 @@ hourVal = ''
 minuteVal = ''
 secondVal = ''
 
+todayDate = datetime.today().strftime('%Y-%m-%d')
+backupFileName = ''
+
 class WorkThread(QThread):
     def __init__(self, parent):
         super().__init__()
 
         self.parent = parent
+
+
  
     def run(self):
 
@@ -60,26 +65,22 @@ class WorkThread(QThread):
 
         if(not os.path.isdir('backup')):
             os.mkdir('backup')
-            self.parent.logTextBox.append('Backup Directory Created Success!')
+            self.parent.logTextBox.append('[' + datetime.today().strftime('%Y-%m-%d %H:%M:%S') + '] Backup Directory Created Success!')
             QApplication.processEvents()
 
 
+
     def copyInBackupDir(self):
-
-        todayDate = datetime.today().strftime('%Y-%m-%d')
-        backupFileName = todayDate + ' B_' + fileName
-
         os.chdir(filePath)
+
         if(os.path.isfile(fileName)): 
             copyfile(backupFileWithDir, backupDir + '\\backup\\' + backupFileName)
-            self.parent.logTextBox.append('File Copy and Paste Success!')
+            self.parent.logTextBox.append('[' + datetime.today().strftime('%Y-%m-%d %H:%M:%S') + '] File Copy and Paste Success!')
             QApplication.processEvents()
 
 
 
     def sendMailBackupFile(self):
-        todayDate = datetime.today().strftime('%Y-%m-%d')
-        backupFileName = todayDate + ' B_' + fileName
 
         os.chdir(backupDir)
         if(os.path.isdir('backup') and os.path.isfile('backup\\'+ backupFileName)):
@@ -104,9 +105,9 @@ class WorkThread(QThread):
                 self.parent.logTextBox.append(e)
                 QApplication.processEvents()
             finally:
-                self.parent.logTextBox.append('Mail Send Success!')
+                self.parent.logTextBox.append('[' + datetime.today().strftime('%Y-%m-%d %H:%M:%S') + '] Mail Send Success!')
                 QApplication.processEvents()
-                self.parent.logTextBox.append('----------------------BackupScript Closed,,,----------------------')
+                self.parent.logTextBox.append('----------------------BackupScript Closed,,,----------------------')     
                 QApplication.processEvents()
                 s.quit()
 
@@ -121,32 +122,35 @@ class Main(QWidget):
         grid = QGridLayout()
         self.setLayout(grid)
 
-        self.backupDirInput = QLineEdit(self)
+        self.backupDirInput = QLineEdit('C:/Development', self)
         self.findBackupDirBtn = QPushButton('Find', self)
 
-        self.backupFileInput = QLineEdit(self)
+        self.backupFileInput = QLineEdit('C:/Development/dddd.txt', self)
         self.findBackupFileBtn = QPushButton('Find', self)
 
-        self.emailInput = QLineEdit(email, self)
+        self.emailInput = QLineEdit('tt@g', self)
 
-        self.emailAppPwInput = QLineEdit(emailAppPw, self)
+        self.emailAppPwInput = QLineEdit('213', self)
 
         self.execBackupBtn = QPushButton('Run', self)
 
-        self.hourSelect = QSpinBox()
-        self.hourSelect.setMinimum(0)
-        self.hourSelect.setMaximum(23)
-        self.hourSelect.setMaximumWidth(50)
-
-        self.minuteSelect = QSpinBox()
-        self.minuteSelect.setMinimum(0)
-        self.minuteSelect.setMaximum(59)
-        self.minuteSelect.setMaximumWidth(50)
+        self.hourLabel = QLabel('HOUR (0~23)', self)
+        self.hourCombo = QComboBox(self)
         
-        self.secondSelect = QSpinBox()
-        self.secondSelect.setMinimum(0)
-        self.secondSelect.setMaximum(59)
-        self.secondSelect.setMaximumWidth(50)
+        for i in range(0, 24):
+            self.hourCombo.addItem(str(i))
+
+        self.minuteLabel = QLabel('MINUTE (0~59)', self)
+        self.minuteCombo = QComboBox(self)
+        
+        for i in range(0, 60):
+            self.minuteCombo.addItem(str(i))
+
+        self.secondLabel = QLabel('SECOND (0~59)', self)
+        self.secondCombo = QComboBox(self)
+        
+        for i in range(0, 60):
+            self.secondCombo.addItem(str(i))
 
         self.hourEvery = QCheckBox('every', self)
         self.minuteEvery = QCheckBox('every', self)
@@ -171,14 +175,14 @@ class Main(QWidget):
 
         grid.addWidget(self.logTextBox, 5, 0, 5, 2)
 
-        grid.addWidget(QLabel('HOUR (0~23)', self), 5, 2)
-        grid.addWidget(self.hourSelect, 5, 3)
+        grid.addWidget(self.hourLabel, 5, 2)
+        grid.addWidget(self.hourCombo, 5, 3)
         grid.addWidget(self.hourEvery, 5, 4)
-        grid.addWidget(QLabel('MINUTE (20~59)', self), 6, 2)
-        grid.addWidget(self.minuteSelect, 6, 3)
+        grid.addWidget(self.minuteLabel, 6, 2)
+        grid.addWidget(self.minuteCombo, 6, 3)
         grid.addWidget(self.minuteEvery, 6, 4)
-        grid.addWidget(QLabel('SECOND (0~59)', self), 7, 2)
-        grid.addWidget(self.secondSelect, 7, 3)
+        grid.addWidget(self.secondLabel, 7, 2)
+        grid.addWidget(self.secondCombo, 7, 3)
         grid.addWidget(self.secondEvery, 7, 4)
 
         grid.addWidget(self.execBackupBtn, 8, 2, 6, 2)
@@ -189,9 +193,15 @@ class Main(QWidget):
         self.findBackupFileBtn.clicked.connect(self.findBackupFile)
         self.execBackupBtn.clicked.connect(self.initVal)
 
+        self.hourEvery.stateChanged.connect(self.checkHourEvery)
+        self.minuteEvery.stateChanged.connect(self.checkMinuteEvery)
+        self.secondEvery.stateChanged.connect(self.checkSecondEvery)
+
         self.setWindowTitle('BackupAutomationSoftware')
         self.resize(1200, 400)
         self.show()
+
+
 
     def findBackupDir(self):
         global backupDir 
@@ -211,7 +221,60 @@ class Main(QWidget):
 
 
 
+    def checkHourEvery(self):
+        if(self.hourEvery.isChecked()):
+            self.hourCombo.removeItem(0)
+            self.hourLabel.setText('HOUR (1~23)')
+        else:
+            self.hourCombo.insertItem(0, '0')
+            self.hourLabel.setText('HOUR (0~23)')
+
+
+
+    def checkMinuteEvery(self):
+        if(self.minuteEvery.isChecked()):
+            self.minuteCombo.removeItem(0)
+            self.minuteLabel.setText('MINUTE (1~59)')
+        else:
+            self.minuteCombo.insertItem(0, '0')
+            self.minuteLabel.setText('MINUTE (0~59)')
+
+
+
+    def checkSecondEvery(self):
+        if(self.secondEvery.isChecked()):
+            self.secondCombo.removeItem(0)
+            self.secondLabel.setText('SECOND (1~59)')
+        else:
+            self.secondCombo.insertItem(0, '0')
+            self.secondLabel.setText('SECOND (0~59)')
+
+
+
     def initVal(self):
+        if(self.backupDirInput.text() == ''):
+            QMessageBox.warning(self, 'Warning', 'Input Your Backup Directory!')
+            self.backupDirInput.setFocus()
+            return False
+
+        if(self.backupFileInput.text() == ''):
+            QMessageBox.warning(self, 'Warning', 'Input Your Backup File With Directory!')
+            self.backupFileInput.setFocus()
+            return False
+
+        if(self.emailInput.text() == ''):
+            QMessageBox.warning(self, 'Warning', 'Input Your Email')
+            self.emailInput.setFocus()
+            return False
+
+        if(self.emailAppPwInput.text() == ''):
+            QMessageBox.warning(self, 'Warning', 'Input Your Email App Password!')
+            self.emailAppPwInput.setFocus()
+            return False
+
+
+        global backupDir
+        global backupFileWithDir
         global email
         global emailAppPw
 
@@ -221,18 +284,16 @@ class Main(QWidget):
 
         global fileName
         global filePath
+        global backupFileName
 
-
-
+        backupDir = self.backupDirInput.text()
+        backupFileWithDir = self.backupFileInput.text()
         email = self.emailInput.text()
         emailAppPw = self.emailAppPwInput.text()
 
-        hourVal = str(self.hourSelect.value())
-        minuteVal = str(self.minuteSelect.value())
-        secondVal = str(self.secondSelect.value())
-
-        fileName = backupFileWithDir[backupFileWithDir.rindex('/') + 1:]
-        filePath = backupFileWithDir[:backupFileWithDir.rfind('/')]
+        hourVal = str(self.hourCombo.currentText())
+        minuteVal = str(self.minuteCombo.currentText())
+        secondVal = str(self.secondCombo.currentText())
 
         if(self.hourEvery.isChecked()):
             hourVal = '*/' + hourVal
@@ -240,6 +301,11 @@ class Main(QWidget):
             minuteVal = '*/' + minuteVal
         if(self.secondEvery.isChecked()):
             secondVal = '*/' + secondVal
+
+        fileName = backupFileWithDir[backupFileWithDir.rindex('/') + 1:]
+        filePath = backupFileWithDir[:backupFileWithDir.rfind('/')]
+        
+        backupFileName = todayDate + ' B_' + fileName
 
         print(hourVal)
         print(minuteVal)

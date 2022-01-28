@@ -41,16 +41,30 @@ class WorkThread(QThread):
 
  
     def run(self):
+        self.isWork = True
 
         self.parent.logTextBox.append('----------------------BackupScript Started,,,----------------------')
 
-        sched = BackgroundScheduler()
-        sched.start()
+        self.sched = BackgroundScheduler()
+        self.sched.start()
 
-        sched.add_job(self.backup, 'cron', hour = hourVal, minute = minuteVal, second = secondVal, id="test1")
+        self.sched.add_job(self.backup, 'cron', hour = hourVal, minute = minuteVal, second = secondVal, id="backupScheduler")
 
-        while True:
+        while self.isWork:
             time.sleep(1)
+
+
+
+    def stopThread(self):
+        self.isWork = False
+        self.quit()
+        self.sched.remove_job('backupScheduler')
+
+        self.parent.logTextBox.append('----------------------BackupScript Closed,,,----------------------')     
+        QApplication.processEvents()
+
+        self.wait(3000)
+
 
 
     def backup(self):
@@ -107,8 +121,6 @@ class WorkThread(QThread):
             finally:
                 self.parent.logTextBox.append('[' + datetime.today().strftime('%Y-%m-%d %H:%M:%S') + '] Mail Send Success!')
                 QApplication.processEvents()
-                self.parent.logTextBox.append('----------------------BackupScript Closed,,,----------------------')     
-                QApplication.processEvents()
                 s.quit()
 
 
@@ -122,17 +134,15 @@ class Main(QWidget):
         grid = QGridLayout()
         self.setLayout(grid)
 
-        self.backupDirInput = QLineEdit('C:/Development', self)
+        self.backupDirInput = QLineEdit(self)
         self.findBackupDirBtn = QPushButton('Find', self)
 
-        self.backupFileInput = QLineEdit('C:/Development/dddd.txt', self)
+        self.backupFileInput = QLineEdit(self)
         self.findBackupFileBtn = QPushButton('Find', self)
 
-        self.emailInput = QLineEdit('tt@g', self)
+        self.emailInput = QLineEdit(self)
 
-        self.emailAppPwInput = QLineEdit('213', self)
-
-        self.execBackupBtn = QPushButton('Run', self)
+        self.emailAppPwInput = QLineEdit(self)
 
         self.hourLabel = QLabel('HOUR (0~23)', self)
         self.hourCombo = QComboBox(self)
@@ -155,9 +165,10 @@ class Main(QWidget):
         self.hourEvery = QCheckBox('every', self)
         self.minuteEvery = QCheckBox('every', self)
         self.secondEvery = QCheckBox('every', self)
-        
     
         self.logTextBox = QTextEdit()
+        self.execBackupBtn = QPushButton('Run', self)
+        self.stopThreadBtn = QPushButton('Stop', self)
 
         grid.addWidget(QLabel('Choose Backup Directory:', self), 0, 0)
         grid.addWidget(self.backupDirInput, 0, 1)
@@ -185,13 +196,15 @@ class Main(QWidget):
         grid.addWidget(self.secondCombo, 7, 3)
         grid.addWidget(self.secondEvery, 7, 4)
 
-        grid.addWidget(self.execBackupBtn, 8, 2, 6, 2)
+        grid.addWidget(self.execBackupBtn, 8, 2, 6, 1)
+        grid.addWidget(self.stopThreadBtn, 8, 3, 6, 2)
 
         self.workThread = WorkThread(self)
 
         self.findBackupDirBtn.clicked.connect(self.findBackupDir)
         self.findBackupFileBtn.clicked.connect(self.findBackupFile)
         self.execBackupBtn.clicked.connect(self.initVal)
+        self.stopThreadBtn.clicked.connect(self.workThread.stopThread)
 
         self.hourEvery.stateChanged.connect(self.checkHourEvery)
         self.minuteEvery.stateChanged.connect(self.checkMinuteEvery)
